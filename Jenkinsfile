@@ -131,7 +131,7 @@ node {
                 }
             }
 
-            println("Application deployed to Development: http://${APPLICATION_FQDN}")
+            println("Application deployed to Development: http://${APPLICATION_FQDN}/db")
         }
     }
 

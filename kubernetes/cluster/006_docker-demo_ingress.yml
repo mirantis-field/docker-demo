@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: docker-demo-ingress
+spec:
+  rules:
+  - host: ${APPLICATION_FQDN}
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: docker-demo
+          servicePort: 8080

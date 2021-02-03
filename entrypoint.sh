@@ -24,7 +24,7 @@ else
 fi
 
 # check and see if postgres is running yet using nc
-while [ "$(nc -z -v -w1 db 5432 > /dev/null 2>&1; echo $?)" -ne "0" ]
+while [ "$(nc -z -v -w1 "${DB_HOST}" 5432 > /dev/null 2>&1; echo $?)" -ne "0" ]
 do
   echo "Database not ready."
   sleep 2

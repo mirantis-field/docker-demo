@@ -1,0 +1,92 @@
+vjersion: "3.3"
+
+services:
+  postgres:
+    image: postgres:${POSTGRES_TAG}
+    deploy:
+      mode: replicated
+      replicas: 1
+      labels:
+        - "com.docker.ucp.access.label=${UCP_COLLECTION_PATH}"
+      placement:
+        constraints:
+          - "node.labels.com.docker.ucp.collection.system!=true"
+          - "node.labels.com.docker.ucp.collection.swarm==true"
+          - "node.labels.com.docker.ucp.orchestrator.swarm==true"
+          - "node.platform.os==linux"
+    environment:
+      - "POSTGRES_USER_FILE=/run/secrets/DB_USER"
+      - "POSTGRES_PASSWORD_FILE=/run/secrets/DB_PASS"
+    secrets:
+      - source: DB_USER
+        target: DB_USER
+        uid: "999"
+        gid: "999"
+        mode: 0400
+      - source: DB_PASS
+        target: DB_PASS
+        uid: "999"
+        gid: "999"
+        mode: 0400
+    volumes:
+      - /shared/postgres/swarm/${ENVIRONMENT:-dev}:/var/lib/postgresql/data
+    networks:
+      - ingress
+      - backend
+  docker-demo:
+    image: ${DTR_URL:-dtr.demo.dckr.org}/demo/docker-demo:${TAG:-latest}
+    deploy:
+      mode: replicated
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 5s
+        failure_action: continue
+      labels:
+        - "com.docker.lb.hosts=${APPLICATION_FQDN}"
+        - "com.docker.lb.network=${USERNAME}-network"
+        - "com.docker.lb.port=8080"
+        - "com.docker.ucp.access.label=${UCP_COLLECTION_PATH}"
+      placement:
+        constraints:
+          - "node.labels.com.docker.ucp.collection.system!=true"
+          - "node.labels.com.docker.ucp.collection.swarm==true"
+          - "node.labels.com.docker.ucp.orchestrator.swarm==true"
+          - "node.platform.os==linux"
+    environment:
+      - "TITLE=Docker Demo (${IMAGE_NAMESPACE}) on Swarm mode"
+      - "DB_HOST=postgres"
+      - "DB_PORT=5432"
+      - "DB_NAME=${DB_NAME:-demo}"
+      - "DB_SSL_MODE=disable"
+    secrets:
+      - source: DB_USER
+        target: DB_USER
+        uid: "0"
+        gid: "0"
+        mode: 0400
+      - source: DB_PASS
+        target: DB_PASS
+        uid: "0"
+        gid: "0"
+        mode: 0400
+    networks:
+      - ingress
+      - backend
+
+networks:
+  ingress:
+    external: true
+    name: ${USERNAME}-ingress
+  backend:
+    driver: overlay
+    labels:
+      - "com.docker.ucp.access.label=${UCP_COLLECTION_PATH}"
+
+secrets:
+  DB_USER:
+    external:
+      name: ${ENVIRONMENT:-dev}_DB_USER
+  DB_PASS:
+    external:
+      name: ${ENVIRONMENT:-dev}_DB_PASS

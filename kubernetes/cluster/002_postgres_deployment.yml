@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: postgres
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      containers:
+        - name: postgres
+          #image: ${REGISTRY_HOSTNAME}/official/postgres:${POSTGRES_TAG}
+          image: postgres:${POSTGRES_TAG}
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: mysecret
+              mountPath: "/etc/mysecrets"
+              readOnly: true
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_USER_FILE
+              value: "/etc/mysecrets/username"
+            - name: POSTGRES_PASSWORD_FILE
+              value: "/etc/mysecrets/password"
+          ports:
+            - name: postgres
+              containerPort: 5432
+      volumes:
+        - name: mysecret
+          secret:
+            secretName: mysecret
+            defaultMode: 0644
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: docker-demo-storage
+      nodeSelector:
+        beta.kubernetes.io/os: linux

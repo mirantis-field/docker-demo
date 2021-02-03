@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docker-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      name: docker-demo
+  template:
+    metadata:
+      labels:
+        name: docker-demo
+    spec:
+      containers:
+        - name: docker-demo
+          image: ${REGISTRY_HOSTNAME}/${IMAGE_NAMESPACE}/${IMAGE_REPOSITORY}:${IMAGE_TAG}
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: mysecret
+              mountPath: "/etc/mysecrets"
+              readOnly: true
+          env:
+            - name: TITLE
+              value: "Docker Demo (${IMAGE_NAMESPACE}) on k8s"
+            - name: DB_HOST
+              value: "postgres"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_SSL_MODE
+              value: "disable"
+            - name: SECRET_DIR
+              value: "/etc/mysecrets"
+          ports:
+            - containerPort: 8080
+      volumes:
+        - name: mysecret
+          secret:
+            secretName: mysecret
+            defaultMode: 0644
+            items:
+              - key: username
+                path: DB_USER
+              - key: password
+                path: DB_PASS
+      nodeSelector:
+        beta.kubernetes.io/os: linux

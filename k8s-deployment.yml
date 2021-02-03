@@ -1,0 +1,159 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: docker-demo-ENVIRONMENT
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  namespace: docker-demo-ENVIRONMENT
+  name: docker-demo-storage-ENVIRONMENT
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 250Mi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysecret
+  namespace: docker-demo-ENVIRONMENT
+type: Opaque
+data:
+  username: ZGVtbw==
+  password: ZGVtbw==
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app
+  namespace: docker-demo-ENVIRONMENT
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+        - name: app
+          image: DTR_URL/demo/docker-demo:TAG
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: mysecret
+              mountPath: "/etc/mysecrets"
+              readOnly: true
+          env:
+            - name: TITLE
+              value: "Docker Demo-ENVIRONMENT on k8s"
+            - name: DB_HOST
+              value: "db"
+            - name: DB_PORT
+              value: "5432"
+            - name: DB_SSL_MODE
+              value: "disable"
+            - name: SECRET_DIR
+              value: "/etc/mysecrets"
+          ports:
+            - containerPort: 8080
+      volumes:
+        - name: mysecret
+          secret:
+            secretName: mysecret
+            defaultMode: 0644
+            items:
+              - key: username
+                path: DB_USER
+              - key: password
+                path: DB_PASS
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: db
+  namespace: docker-demo-ENVIRONMENT
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: db
+  template:
+    metadata:
+      labels:
+        app: db
+    spec:
+      containers:
+        - name: db
+          image: DTR_URL/official/postgres:latest
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: mysecret
+              mountPath: "/etc/mysecrets"
+              readOnly: true
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+          env:
+            - name: POSTGRES_USER_FILE
+              value: "/etc/mysecrets/username"
+            - name: POSTGRES_PASSWORD_FILE
+              value: "/etc/mysecrets/password"
+          ports:
+            - containerPort: 5432
+      volumes:
+        - name: mysecret
+          secret:
+            secretName: mysecret
+            defaultMode: 0644
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: docker-demo-storage-ENVIRONMENT
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app
+  namespace: docker-demo-ENVIRONMENT
+spec:
+  selector:
+    app: app
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: docker-demo-ENVIRONMENT
+spec:
+  selector:
+    app: db
+  ports:
+  - protocol: TCP
+    port: 5432
+    targetPort: 5432
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  namespace: docker-demo-ENVIRONMENT
+  name: docker-demo-ENVIRONMENT-ingress
+spec:
+  rules:
+  - host: docker-demo-ENVIRONMENT-k8s.DOMAIN_NAME
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: app
+          servicePort: 8080

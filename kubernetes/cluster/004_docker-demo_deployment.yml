@@ -24,7 +24,7 @@ spec:
             - name: TITLE
               value: "Docker Demo (${IMAGE_NAMESPACE}) on k8s"
             - name: DB_HOST
-              value: "db"
+              value: "postgres"
             - name: DB_PORT
               value: "5432"
             - name: DB_SSL_MODE

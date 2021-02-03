@@ -29,7 +29,8 @@ spec:
             - name: POSTGRES_PASSWORD_FILE
               value: "/etc/mysecrets/password"
           ports:
-            - containerPort: 5432
+            - name: postgres
+              containerPort: 5432
       volumes:
         - name: mysecret
           secret:

@@ -22,7 +22,7 @@ spec:
               readOnly: true
           env:
             - name: TITLE
-              value: "Docker Demo (${IMAGE_NAMESPACE}) on k8s"
+              value: "Mirantis Demo (${IMAGE_NAMESPACE}) on k8s"
             - name: DB_HOST
               value: "postgres"
             - name: DB_PORT
